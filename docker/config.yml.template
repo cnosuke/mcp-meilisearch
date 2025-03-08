@@ -1,0 +1,6 @@
+meilisearch:
+  host: http://localhost:7700
+  api_key: "{{API_KEY}}"
+server:
+  host: 0.0.0.0
+  port: 3000

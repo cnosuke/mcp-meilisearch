@@ -2,10 +2,10 @@ NAME     := mcp-meilisearch
 VERSION  := $(shell git describe --tags 2>/dev/null)
 REVISION := $(shell git rev-parse --short HEAD 2>/dev/null)
 SRCS    := $(shell find . -type f -name '*.go' -o -name 'go.*')
-LDFLAGS := -ldflags="-s -w -X \"main.Version=$(VERSION)\" -X \"main.Revision=$(REVISION)\""
+LDFLAGS := -ldflags="-s -w -X \"main.Version=$(VERSION)\" -X \"main.Revision=$(REVISION)\" -extldflags \"-static\""
 
 bin/$(NAME): $(SRCS)
-	go build $(LDFLAGS) -o bin/$(NAME) main.go
+	CGO_ENABLED=0 go build -tags netgo -tags timetzdata -installsuffix netgo $(LDFLAGS) -o bin/$(NAME) main.go
 
 .PHONY: test deps inspect clean docker-build docker-run docker-run-meilisearch docker-load-test-data
 
