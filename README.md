@@ -143,3 +143,7 @@ Contributions are welcome! Please fork the repository and submit pull requests f
 ## License
 
 This project is licensed under the MIT License.
+
+## Author
+
+cnosuke (x.com/cnosuke)
