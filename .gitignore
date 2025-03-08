@@ -1,23 +1,6 @@
-# バイナリ
-/mcp-meilisearch
-
-# ログファイル
+bin/
+dist/
+*.md
+*.db
 *.log
-
-# IDEの設定
-.idea/
-.vscode/
-
-# Go関連
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-go.sum
-
-# OS関連
-.DS_Store
-Thumbs.db
+log

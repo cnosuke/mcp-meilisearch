@@ -7,7 +7,7 @@ LDFLAGS := -ldflags="-s -w -X \"main.Version=$(VERSION)\" -X \"main.Revision=$(R
 bin/$(NAME): $(SRCS)
 	go build $(LDFLAGS) -o bin/$(NAME) main.go
 
-.PHONY: test deps inspect clean
+.PHONY: test deps inspect clean docker-build docker-run docker-run-meilisearch docker-load-test-data
 
 deps:
 	go mod download
@@ -27,3 +27,13 @@ docker-build:
 
 docker-run:
 	docker run -p 7701:7701 --env-file .env $(NAME):latest
+
+docker-run-meilisearch:
+	docker run -it --rm \
+		-p 7700:7700 \
+		-v $(pwd)/tmp/meili_data:/meili_data \
+		getmeili/meilisearch:v1.13 \
+		meilisearch --master-key="MASTER_KEY"
+
+docker-load-test-data:
+	ruby ./scripts/load_test_data.rb -h http://localhost:7700 -k sample-key -i movies -v
