@@ -1,233 +1,145 @@
 # Meilisearch MCP Server (Go)
 
-Model Context Protocol (MCP) サーバーとして動作する、Go言語で実装されたMeilisearch検索エンジンのラッパーです。
+A Go-based wrapper for Meilisearch search engine that functions as a Model Context Protocol (MCP) server.
 
-## 概要
+## Overview
 
-このプロジェクトは、Meilisearch検索エンジンをMCP (Model Context Protocol) サーバーとして使用できるようにするためのGo言語アプリケーションです。MCPサーバーを介して、Claudeなどの大規模言語モデル（LLM）がMeilisearchの強力な検索機能にアクセスできるようになります。
+This project is a Go application designed to enable the Meilisearch search engine to be used as an MCP (Model Context Protocol) server. Through the MCP server, large language models (LLMs) like Claude can access Meilisearch's powerful search capabilities.
 
-## 特徴
+## Features
 
-- Go言語で実装された軽量かつ高速なMCPサーバー
-- Meilisearch APIとのシームレスな統合
-- MCPプロトコルに準拠したインターフェース
-- 検索、インデックス管理、ドキュメント操作などの主要機能をサポート
-- Docker対応
+- Lightweight and fast MCP server implemented in Go
+- Seamless integration with Meilisearch API
+- Interface compliant with the MCP protocol
+- Support for key features including search, index management, and document operations
 
-## インストール
+## Installation
 
-### 前提条件
+### Prerequisites
 
-- Go 1.24以上
-- 実行中のMeilisearchインスタンス
+- Go 1.24 or higher
+- Running Meilisearch instance
 
-### ビルド方法
+### Build Instructions
 
 ```bash
-# リポジトリのクローン
+# Clone the repository
 git clone https://github.com/cnosuke/mcp-meilisearch.git
 cd mcp-meilisearch
 
-# 依存関係のインストール
+# Install dependencies
 make deps
 
-# ビルド
+# Build
 make bin/mcp-meilisearch
 ```
 
-### Dockerを使用する場合
+## Configuration
 
-```bash
-# Dockerイメージのビルド
-make docker-build
-
-# 環境変数ファイルを作成（サンプルをコピー）
-cp .env.example .env
-# 必要に応じて.envファイルを編集
-
-# Dockerでの実行
-make docker-run
-```
-
-## 設定
-
-`config.yml`ファイルを使用して、Meilisearchサーバーへの接続設定を行います：
+Use the `config.yml` file to configure connection settings to the Meilisearch server:
 
 ```yaml
 meilisearch:
-  host: http://localhost:7700  # Meilisearchサーバーのアドレス
-  api_key: ""                  # 必要に応じてAPIキーを設定
+  host: http://localhost:7700 # Address of Meilisearch server
+  api_key: '' # Set API key if needed
 ```
 
-環境変数でも設定可能です：
-- `MEILISEARCH_HOST`: Meilisearchサーバーのアドレス
-- `MEILISEARCH_API_KEY`: Meilisearch APIキー
+You can also configure using environment variables:
 
-## 使用方法
+- `MEILISEARCH_HOST`: Address of Meilisearch server
+- `MEILISEARCH_API_KEY`: Meilisearch API key
 
-### サーバーの起動
+## Usage
+
+### Starting the Server
 
 ```bash
 ./bin/mcp-meilisearch server --config config.yml
 ```
 
-オプション：
-- `--no-logs`: ログ出力を最小化（エラーのみ表示）
-- `--log <ファイルパス>`: 指定したファイルにログを出力
+Options:
 
-### MCPクライアントからの接続
+- `--no-logs`: Minimize log output (show errors only)
+- `--log <file path>`: Output logs to the specified file
 
-このMCPサーバーは、Claude AI (Claude Desktop)などのMCP対応クライアントと連携できます。
+### Using with Claude Desktop
 
-Claude Desktopの場合の設定例：
+To integrate with Claude Desktop, add an entry to your `claude_desktop_config.json` file. **Because MCP uses stdio for communication, you must redirect logs away from stdio by using the `--no-logs` and `--log` flags.** Below is an example configuration that injects the SQLite file path via an environment variable:
+
 ```json
 {
   "mcpServers": {
-    "meilisearch": {
-      "command": "/path/to/mcp-meilisearch",
-      "args": ["server", "--config", "/path/to/config.yml"]
+    "sqlite": {
+      "command": "./bin/mcp-meilisearch",
+      "args": ["server", "--no-logs", "--log", "path_to_log_file"],
+      "env": {
+        "MEILISEARCH_HOST": "http://localhost:7700",
+        "MEILISEARCH_API_KEY": "api_key"
+      }
     }
   }
 }
 ```
 
-## 利用可能なツール
+This configuration registers the MCP SQLite Server with Claude Desktop, ensuring that all logs are directed to the specified log file rather than interfering with the MCP protocol messages transmitted over stdio.
 
-このMCPサーバーは以下のツールを提供します：
+## Available Tools
 
-### サーバー管理
+This MCP server provides the following tools:
 
-- `health_check`: Meilisearchサーバーの状態を確認します。
-  - パラメータ: なし
-  - 戻り値: サーバーのヘルスステータス情報
+### Server Management
 
-### インデックス管理
+- `health_check`: Check the status of the Meilisearch server.
+  - Parameters: None
+  - Returns: Server health status information
 
-- `list_indexes`: 全てのインデックスのリストを取得します。
-  - パラメータ: なし
-  - 戻り値: インデックスの配列
+### Index Management
 
-- `create_index`: 新規インデックスを作成します。
-  - パラメータ:
-    - `uid`: インデックスの一意識別子（必須）
-    - `primary_key`: ドキュメントのプライマリキー（オプション）
-  - 戻り値: 作成タスクの情報
+- `list_indexes`: Retrieve a list of all indexes.
 
-### ドキュメント操作
+  - Parameters: None
+  - Returns: Array of indexes
 
-- `get_documents`: インデックスからドキュメントを取得します。
-  - パラメータ:
-    - `index_uid`: インデックスのUID（必須）
-    - `limit`: 取得するドキュメントの最大数（オプション）
-    - `offset`: スキップするドキュメント数（オプション）
-    - `fields`: 取得するフィールドの配列（オプション）
-  - 戻り値: ドキュメントの配列
+- `create_index`: Create a new index.
+  - Parameters:
+    - `uid`: Unique identifier for the index (required)
+    - `primary_key`: Primary key for documents (optional)
+  - Returns: Creation task information
 
-- `add_documents`: インデックスにドキュメントを追加します。
-  - パラメータ:
-    - `index_uid`: インデックスのUID（必須）
-    - `documents`: 追加するドキュメントの配列（必須）
-    - `primary_key`: プライマリキー（オプション）
-  - 戻り値: 追加タスクの情報
+### Document Operations
 
-### 検索
+- `get_documents`: Retrieve documents from an index.
 
-- `search`: インデックス内のドキュメントを検索します。
-  - パラメータ:
-    - `index_uid`: 検索対象インデックスのUID（必須）
-    - `query`: 検索クエリ（必須）
-    - `limit`: 返される結果の最大数（オプション）
-    - `offset`: スキップする結果数（オプション）
-    - `filter`: フィルタ式（オプション）
-    - `sort`: ソート基準の配列（オプション）
-  - 戻り値: 検索結果
+  - Parameters:
+    - `index_uid`: Index UID (required)
+    - `limit`: Maximum number of documents to retrieve (optional)
+    - `offset`: Number of documents to skip (optional)
+    - `fields`: Array of fields to retrieve (optional)
+  - Returns: Array of documents
 
-## 使用例
+- `add_documents`: Add documents to an index.
+  - Parameters:
+    - `index_uid`: Index UID (required)
+    - `documents`: Array of documents to add (required)
+    - `primary_key`: Primary key (optional)
+  - Returns: Addition task information
 
-### インデックスの作成
+### Search
 
-```json
-{
-  "name": "create_index",
-  "arguments": {
-    "uid": "movies",
-    "primary_key": "id"
-  }
-}
-```
+- `search`: Search for documents in an index.
+  - Parameters:
+    - `index_uid`: UID of the index to search (required)
+    - `query`: Search query (required)
+    - `limit`: Maximum number of results to return (optional)
+    - `offset`: Number of results to skip (optional)
+    - `filter`: Filter expression (optional)
+    - `sort`: Array of sort criteria (optional)
+  - Returns: Search results
 
-### ドキュメントの追加
+## Contributing
 
-```json
-{
-  "name": "add_documents",
-  "arguments": {
-    "index_uid": "movies",
-    "documents": [
-      {
-        "id": 1,
-        "title": "Carol",
-        "genres": ["Romance", "Drama"]
-      },
-      {
-        "id": 2,
-        "title": "Wonder Woman",
-        "genres": ["Action", "Adventure"]
-      }
-    ]
-  }
-}
-```
+Contributions are welcome! Please fork the repository and submit pull requests for improvements or bug fixes. For major changes, open an issue first to discuss your ideas.
 
-### 検索の実行
+## License
 
-```json
-{
-  "name": "search",
-  "arguments": {
-    "index_uid": "movies",
-    "query": "wonder",
-    "limit": 5
-  }
-}
-```
-
-## プロジェクト構造
-
-```
-mcp-meilisearch/
-├── bin/                    # ビルド済みバイナリの出力先
-├── config/                 # 設定関連のパッケージ
-│   └── config.go           # 設定ロード機能
-├── logger/                 # ロギング関連のパッケージ
-│   └── logger.go           # ロガー初期化
-├── server/                 # サーバー実装
-│   ├── meilisearch.go      # Meilisearchクライアント管理
-│   ├── server.go           # MCPサーバーのメイン実装
-│   └── tools/              # ツール実装
-│       ├── tools.go        # ツール登録
-│       ├── health_check.go # ヘルスチェックツール
-│       ├── list_indexes.go # インデックス一覧ツール
-│       └── ...             # その他のツール
-├── config.yml              # 設定ファイル
-├── Dockerfile              # Dockerビルド設定
-├── go.mod                  # Goモジュール定義
-└── main.go                 # エントリーポイント
-```
-
-## 拡張方法
-
-このプロジェクトは拡張しやすい構造になっています。新しいツールを追加するには：
-
-1. `server/tools/`ディレクトリに新しいツール実装ファイルを作成します
-2. `server/tools/tools.go`ファイルの`RegisterAllTools`関数内で新しいツールを登録します
-
-## ライセンス
-
-MIT
-
-## 関連プロジェクト
-
-- [Meilisearch](https://github.com/meilisearch/meilisearch) - 元となる検索エンジン
-- [meilisearch-mcp](https://github.com/meilisearch/meilisearch-mcp) - Python版のMeilisearch MCP
-- [meilisearch-go](https://github.com/meilisearch/meilisearch-go) - Go言語用Meilisearchクライアント
+This project is licensed under the MIT License.
